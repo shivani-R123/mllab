@@ -1,0 +1,67 @@
+import numpy as np
+from ipywidgets import interact
+from bokeh.plotting import figure, show, output_notebook
+from bokeh.layouts import gridplot
+import matplotlib.pyplot as plt
+
+# Plotting settings
+%matplotlib inline
+output_notebook()
+plt.style.use('seaborn-v0_8-dark')  # Use 'seaborn-v0_8-dark' for compatibility
+
+# --------------------------
+# Local Regression Function (Fixed)
+# --------------------------
+def local_regression(x0, X, Y, tau):
+    x0_vec = np.array([1, x0])
+    X_mat = np.array([[1, xi] for xi in X])
+    W = np.diag(np.exp(-np.sum((X_mat - x0_vec) ** 2, axis=1) / (2 * tau ** 2)))
+
+    beta = np.linalg.pinv(X_mat.T @ W @ X_mat) @ X_mat.T @ W @ Y
+    return x0_vec @ beta
+
+# --------------------------
+# First Visualization (matplotlib)
+# --------------------------
+def draw(tau):
+    prediction = [local_regression(x0, X, Y, tau) for x0 in domain]
+    plt.plot(X, Y, 'o', color='black')
+    plt.plot(domain, prediction, color='red')
+    plt.title(f"Local Weighted Regression with tau = {tau}")
+    plt.show()
+
+# First dataset
+X = np.linspace(-3, 3, num=1000)
+domain = X
+Y = np.log(np.abs(X ** 2 - 1) + 0.5)
+
+draw(10)
+draw(0.1)
+draw(0.01)
+draw(0.001)
+
+# --------------------------
+# Second Visualization (Bokeh)
+# --------------------------
+def plot_lwr(tau):
+    domain = np.linspace(-3, 3, num=300)
+    prediction = [local_regression(x0, X, Y, tau) for x0 in domain]
+
+    # Changed plot_width and plot_height to width and height
+    plot = figure(width=400, height=400)
+    plot.title.text = 'tau=%g' % tau
+    plot.scatter(X, Y, alpha=0.3)
+    plot.line(domain, prediction, line_width=2, color='red')
+
+    return plot
+
+# New dataset for bokeh plots
+n = 1000
+X = np.linspace(-3, 3, num=n)
+Y = np.abs(X ** 3 - 1)
+X += np.random.normal(scale=0.1, size=n)
+
+show(gridplot([
+    [plot_lwr(10.0), plot_lwr(1.0)],
+    [plot_lwr(0.1), plot_lwr(0.01)]
+]))
