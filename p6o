@@ -1,0 +1,69 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from bokeh.plotting import figure, show, output_notebook
+from bokeh.layouts import gridplot
+
+# For inline plotting
+%matplotlib inline
+output_notebook()
+
+plt.style.use('seaborn-dark')
+
+# Locally Weighted Regression function
+def local_regression(x0, X, Y, tau):
+    x0 = np.array([1, x0])
+    X_ = np.array([[1, i] for i in X])
+    
+    # Compute weights
+    weights = np.exp(np.sum((X_ - x0) ** 2, axis=1) / (-2 * tau ** 2))
+    W = np.diag(weights)
+
+    # Calculate beta using normal equation with weights
+    XTW = np.dot(X_.T, W)
+    beta = np.dot(np.linalg.pinv(np.dot(XTW, X_)), np.dot(XTW, Y))
+
+    # Return prediction at x0
+    return np.dot(x0, beta)
+
+# Function to draw matplotlib plot
+def draw(tau):
+    prediction = [local_regression(x0, X, Y, tau) for x0 in domain]
+    plt.plot(X, Y, 'o', color='black')
+    plt.plot(domain, prediction, color='red')
+    plt.title('tau = {}'.format(tau))
+    plt.show()
+
+# Create base data
+X = np.linspace(-3, 3, num=1000)
+domain = X
+Y = np.log(np.abs(X ** 2 - 1) + 0.5)
+
+# Plot with different tau values
+draw(10)
+draw(0.1)
+draw(0.01)
+draw(0.001)
+
+# Function to draw Bokeh plot
+def plot_lwr(tau):
+    domain = np.linspace(-3, 3, num=300)
+    prediction = [local_regression(x0, X, Y, tau) for x0 in domain]
+    
+    plot = figure(plot_width=400, plot_height=400)
+    plot.title.text = 'tau = {}'.format(tau)
+    plot.scatter(X, Y, alpha=0.3)
+    plot.line(domain, prediction, line_width=2, color='red')
+    
+    return plot
+
+# For second part: change Y to another distribution
+n = 1000
+X = np.linspace(-3, 3, num=n)
+Y = np.abs(X ** 3 - 1)
+X += np.random.normal(scale=0.1, size=n)
+
+# Show Bokeh plots
+show(gridplot([
+    [plot_lwr(10.0), plot_lwr(1.0)],
+    [plot_lwr(0.1), plot_lwr(0.01)]
+]))
